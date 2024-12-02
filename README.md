@@ -47,7 +47,7 @@ password.send_keys("TWOJE_HASŁO")
 Zmodyfikuj datę, na którą chcesz zarezerwować termin:
 if header == "Friday<br>13-12-2024":  # Zamień na własny dzień w formacie "Day_name<br>dd-mm-yyyy"
 
-4. Konfiguracja Wyboru Wniosku
+5. Konfiguracja Wyboru Wniosku
 Można ją uzyskać klikając na stronie ulcu "zbadaj", "select element to inspect" i klikając w suwak wyboru wniosku
 ![image](https://github.com/user-attachments/assets/4c6bb53b-5191-4416-b686-ea755608ab96)
 
@@ -55,7 +55,7 @@ Zmień wartość odpowiadającą Twojemu wnioskowi:
 select.select_by_value('12345')  # Zamień na własny numer wniosku
 
 5. Konfiguracja Czasu Odświeżania Strony
-Dostosuj częstotliwość odświeżania strony:
+6. Dostosuj częstotliwość odświeżania strony:
 
 duration = 30  # Zmień na żądany czas trwania w sekundach
 time.sleep(5)   # Zmień na żądany interwał odświeżania w sekundach
