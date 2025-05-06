@@ -22,6 +22,7 @@ Ten projekt to skrypt automatyzujący proces rezerwacji terminów egzaminacyjnyc
 - `selenium`
 - `webdriver-manager`
 - `requests`
+- `keyboard`
 
 ## Konfiguracja
 
@@ -35,7 +36,10 @@ Ten projekt to skrypt automatyzujący proces rezerwacji terminów egzaminacyjnyc
   - Edytuj zmienną `message` w sekcji `message()` w kodzie:
     
     ```python
-    message = "<@1234567890> Reserved!!!"  # Zamień na swój Discord User ID
+    data = {
+        "content": "<@1234567890> Reserved!!!",                 #change this numbers to your Discord User ID
+        "username": "Essa"
+    }
     ```
 
 - **Uzyskaj Webhook URL**:
@@ -45,7 +49,7 @@ Ten projekt to skrypt automatyzujący proces rezerwacji terminów egzaminacyjnyc
 - **Skopiuj adres URL webhooka i wklej go w zmienną `url`**:
 
   ```python
-  url = "https://discord.com/api/webhooks/your_webhook_url"
+  url = "https://discord.com/api/webhooks/your_webhook_ur"
   ```
 
 ### 2. Konfiguracja Konta ULC
@@ -53,9 +57,10 @@ Ten projekt to skrypt automatyzujący proces rezerwacji terminów egzaminacyjnyc
 - **Edytuj dane logowania w skrypcie**:
   
   ```python
-  pin.send_keys("TWÓJ_PIN")
-  birthdate.send_keys("dd-mm-rrrr")  # np. "12-12-1990"
-  password.send_keys("TWOJE_HASŁO")
+  SESSION_ID = "YOUR_SESSION_ID"
+  PIN = "YOUR_PIN"
+  BIRTHDATE = "dd-mm-rrrr"
+  PASSWORD = "YOUR_PASSWORD"
   ```
 
 ### 3. Konfiguracja Dnia Rezerwacji
@@ -63,7 +68,7 @@ Ten projekt to skrypt automatyzujący proces rezerwacji terminów egzaminacyjnyc
 - **Zmodyfikuj datę, na którą chcesz zarezerwować termin**:
 
   ```python
-  if header == "Friday<br>13-12-2024":  # Zamień na własny dzień w formacie "Day_name<br>dd-mm-yyyy"
+  if header in ["Piątek<br>16-05-2025", "Pon<br>12-05-2025"]:  # Zamień na własny dzień w formacie "Day_name<br>dd-mm-yyyy"
   ```
 
 ### 4. Konfiguracja Wyboru Wniosku
@@ -75,17 +80,5 @@ Ten projekt to skrypt automatyzujący proces rezerwacji terminów egzaminacyjnyc
 - **Zmień wartość odpowiadającą Twojemu wnioskowi**:
 
   ```python
-  select.select_by_value('12345')  # Zamień na własny numer wniosku
+  APPLICATION_ID = "12345"  # Zamień na własny numer wniosku
   ```
-
-### 5. Konfiguracja Czasu Odświeżania Strony
-
-- **Dostosuj czas odświeżania strony**:
-
-  ```python
-  duration = 30  # Zmień na żądany czas trwania w sekundach
-  time.sleep(5)   # Zmień na żądany interwał odświeżania w sekundach
-  ```
-
-- **Uwagi dotyczące słabego internetu**:
-  - Jeśli masz wolniejsze połączenie internetowe, zwiększ wartości w `time.sleep` zarówno w funkcji `main`, jak i w funkcji `login`.
