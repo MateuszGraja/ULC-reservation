@@ -1,206 +1,144 @@
 import time
 import datetime
+import keyboard
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import Select
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import Select
 from webdriver_manager.chrome import ChromeDriverManager
 import requests
 
-def listToString(s):
-    """Converts a list of characters into a string."""
-    return "".join(s)
+# === CONFIGURATION ===
+SESSION_ID = "YOUR_SESSION_ID"      # Change the session ID to the one you want to reserve
+PIN = "YOUR_PIN"                    # Replace with your own PIN
+BIRTHDATE = "dd-mm-rrrr"            # Change the birth date in format dd-mm-yyyy
+PASSWORD = "YOUR_PASSWORD"          # Replace with your own password
+APPLICATION_ID = "12345"            # Change to the value corresponding to the selected application (how to get it described on github)
 
 def message():
-    """Sends a message to Discord using a webhook."""
-    message = "<@1234567890>Reserved!!!"            #change this numbers to your Discord User ID
-    message = listToString(message)
-    url = "webhook url"                             #paste your server webhook URL
-
+    url = "https://discord.com/api/webhooks/your_webhook_ur"    #paste your server webhook URL
     data = {
-        "content": message,
+        "content": "<@1234567890> Reserved!!!",                 #change this numbers to your Discord User ID
         "username": "Essa"
     }
-
     try:
         result = requests.post(url, json=data)
         result.raise_for_status()
         print(f"Payload delivered successfully, code {result.status_code}.")
     except requests.exceptions.HTTPError as err:
-        print(f"Error sending message: {err}")
+        print(f"Błąd podczas wysyłania wiadomości: {err}")
 
 def login(driver):
-    """Logs into the ULC website."""
     try:
-        print("Navigating to the login page...")
         driver.get("https://app.ulc.gov.pl/")
         time.sleep(2)
-
-        print("Entering PIN...")
-        pin = driver.find_element(By.ID, "pub2_login_pin")
-        pin.send_keys("YOUR_PIN")                           # Replace with your own PIN
-
-        print("Entering birth date...")
-        birthdate = driver.find_element(By.ID, "pub2_login_birthdate")
-        birthdate.send_keys("12-12-1234")                   # Change the birth date in format dd-mm-yyyy
-
-        print("Entering password...")
-        password = driver.find_element(By.ID, "pub2_login_password")
-        password.send_keys("YOUR_PASSWORD")                 # Replace with your own password
-
-        print("Clicking PIN...")
-        pin.click()
-
-        print("Accepting terms and conditions...")
+        driver.find_element(By.ID, "pub2_login_pin").send_keys(PIN)
+        driver.find_element(By.ID, "pub2_login_birthdate").send_keys(BIRTHDATE)
+        driver.find_element(By.ID, "pub2_login_password").send_keys(PASSWORD)
+        driver.find_element(By.ID, "pub2_login_pin").click()
         driver.find_element(By.ID, "pub2_login_accept").click()
         time.sleep(1)
-
-        print("Clicking the second button...")
         driver.find_elements(By.TAG_NAME, "button")[1].click()
         time.sleep(1)
-
-        print("Clicking the button with class 'btn'...")
         driver.find_elements(By.CLASS_NAME, "btn")[0].click()
         time.sleep(1)
 
-        print("Clicking the first element with class 'list-group-item'...")
-        driver.find_elements(By.CLASS_NAME, "list-group-item")[0].click()
+        session_links = driver.find_elements(By.CLASS_NAME, "list-group-item")
+        for link in session_links:
+            href = link.get_attribute("href")
+            if href and f"sessions/{SESSION_ID}" in href:
+                link.click()
+                break
+        else:
+            raise Exception(f"Nie znaleziono sesji o ID {SESSION_ID}")
     except Exception as e:
-        print(f"Error during login: {e}")
+        print(f"Błąd podczas logowania: {e}")
         raise
 
 def select_application(driver):
-    """Selects the appropriate type of application from the dropdown list."""
     try:
-        print("Selecting the appropriate application...")
         select = Select(driver.find_element(By.ID, 'pub2_reservation_application'))
-        select.select_by_value('12345')             # Change to the value corresponding to the selected application(how to get it described on github)
-        print("Application selected!")
+        select.select_by_value(APPLICATION_ID)
     except Exception as e:
-        print(f"Error selecting application: {e}")
+        print(f"Błąd podczas wybierania wniosku: {e}")
         raise
 
-def main(driver):
-    """Main function handling the reservation process."""
+def check_availability(driver):
     try:
-        print("Refreshing the page...")
-        driver.refresh()
-        time.sleep(1)
-
-        select_application(driver)
-        time.sleep(1)
-
-        print("Searching for elements with class 'bg-success'...")
         arr = driver.find_elements(By.CLASS_NAME, "bg-success")
-
         for el in arr:
             try:
                 header = el.find_elements(By.CLASS_NAME, "card-header")[0].get_attribute('innerHTML')
-                print(f"Found header: {header}")
-                if header == "Friday<br>13-12-2024":                # Change date that you want to reserve "Day_name<br>dd-mm-yyyy"
-                    print("Found the appropriate date, clicking the button...")
+                print(f"Znaleziono nagłówek: {header}")
+                if header in ["Piątek<br>16-05-2025", "Pon<br>12-05-2025"]:         # Change to the desired date
                     el.find_elements(By.TAG_NAME, "button")[0].click()
                     message()
-                    return False
+                    return True
             except Exception as e:
-                print(f"Error processing element: {e}")
-
-        print("Did not find the appropriate date, continuing to refresh...")
-        return True
+                print(f"Błąd podczas przetwarzania elementu: {e}")
+        return False
     except Exception as e:
-        print(f"Error in main function: {e}")
-        return True
+        print(f"Błąd podczas sprawdzania dostępności: {e}")
+        return False
+
+def main(driver):
+    try:
+        print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Start odświeżania!")
+        start_time = time.time()
+        refresh_time_limit = 5
+        loop_start_time = time.time()
+
+        while time.time() - loop_start_time < refresh_time_limit:
+            driver.refresh()
+            select_application(driver)
+            time.sleep(1)
+
+            if check_availability(driver):
+                print("Rezerwacja została dokonana. Zakończam odświeżanie.")
+                return
+
+        next_time = (datetime.datetime.now().replace(second=0, microsecond=0) + datetime.timedelta(minutes=10)).strftime('%H:%M:%S')
+        print(f"Czekam do {next_time}...")
+    except Exception as e:
+        print(f"Błąd w funkcji main: {e}")
 
 def initialize_driver():
-    """Initializes the Chrome browser with appropriate options."""
-    try:
-        print("Initializing Chrome browser...")
-        options = webdriver.ChromeOptions()
-        options.add_argument("--start-maximized")  # Optionally: start the browser in maximized mode
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
-        return driver
-    except Exception as e:
-        print(f"Error initializing ChromeDriver: {e}")
-        raise
-
-def run_refresh_task(driver):
-    """Function to perform refreshing and checking for appointments for 30 seconds."""
-    try:
-        start_time = time.time()
-        duration = 30                               # Duration of refreshing in seconds
-
-        while True:
-            elapsed_time = time.time() - start_time
-            if elapsed_time > duration:
-                print("30 seconds have passed. Ending refresh.")
-                break
-
-            continue_refresh = main(driver)
-            if not continue_refresh:
-                print("Appointment found. Ending refresh.")
-                break
-
-            time.sleep(5)                           # Refresh every 5 seconds
-    except Exception as e:
-        print(f"Exception in run_refresh_task: {e}")
-
-def calculate_next_run():
-    """Calculates the next time marker (on the full 10-minute mark) and the start time (1 minute before)."""
-    now = datetime.datetime.now()
-    minutes = (now.minute // 10 + 1) * 10
-    if minutes == 60:
-        minutes = 0
-        next_hour = now.hour + 1
-    else:
-        next_hour = now.hour
-    try:
-        next_run = now.replace(hour=next_hour, minute=minutes % 60, second=0, microsecond=0)
-    except ValueError:
-        next_run = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    if next_run <= now:
-        next_run += datetime.timedelta(hours=1)
-    start_time = next_run - datetime.timedelta(minutes=1)
-    return start_time, next_run
-
-def wait_until(target_time):
-    """Waits until the specified time (datetime object)."""
-    now = datetime.datetime.now()
-    wait_seconds = (target_time - now).total_seconds()
-    if wait_seconds > 0:
-        print(f"Waiting for {int(wait_seconds)} seconds until {target_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        time.sleep(wait_seconds)
-    else:
-        print(f"Time {target_time.strftime('%Y-%m-%d %H:%M:%S')} has already passed.")
+    options = webdriver.ChromeOptions()
+    options.add_argument("--start-maximized")
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=options)
+    return driver
 
 def run_task():
-    """Main function managing the script's execution cycle."""
+    driver = initialize_driver()
+    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Nowa instancja przeglądarki uruchomiona.")
+    login(driver)
+
     while True:
-        try:
-            start_time, next_run = calculate_next_run()
+        now = datetime.datetime.now()
+        minute = now.minute
+        second = now.second
 
-            wait_until(start_time)
-
-            print(f"Starting browser and logging in at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
+        if minute % 10 == 9 and second == 0:
+            print(f"[{now.strftime('%H:%M:%S')}] Restart przeglądarki minutę przed interwałem.")
+            driver.quit()
+            time.sleep(2)
             driver = initialize_driver()
+            print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Nowa instancja przeglądarki uruchomiona.")
             login(driver)
 
-            wait_until(next_run)
+        if minute % 10 == 0 and second == 0:
+            main(driver)
 
-            print(f"Starting refresh and checking for appointments at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        if second == 0:
+            print(f"[{now.strftime('%H:%M')}] Czekam...")
 
-            run_refresh_task(driver)
+        if keyboard.is_pressed('q'):
+            print("Zatrzymuję skrypt (q).")
+            driver.quit()
+            break
 
-        except Exception as e:
-            print(f"Exception in run_task: {e}")
-        finally:
-            print("Closing the browser...")
-            try:
-                driver.quit()
-            except:
-                pass
-            print("Task completed.\n")
+        time.sleep(1)
 
 if __name__ == "__main__":
     run_task()
